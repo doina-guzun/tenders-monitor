@@ -298,7 +298,7 @@ def civic(win_start_loc, win_end_loc):
             intro = clean(im.group(1)) if im else ""
             om = re.search(r'civiccontent-blog-badge-tag"[^>]*title="([^"]+)"', c)
             body = ""
-            if not kw_hit(title + " | " + intro, KW_ALL):
+            if True:
               try:
                 dh = get_text("https://civic.md" + href)
                 a = dh.find('class="desc-article"')
@@ -313,7 +313,7 @@ def civic(win_start_loc, win_end_loc):
             if hit:
                 num = re.search(r"/(\d+)-", href)
                 found.append(dict(id="civic-" + (num.group(1) if num else href), title=title, pub=d,
-                                  link="https://civic.md" + href, kw=hit,
+                                  link="https://civic.md" + href, kw=hit, body=body[:20000],
                                   org=htmlmod.unescape(om.group(1)) if om else ""))
         if oldest is not None and oldest < win_start_loc:
             break
@@ -398,7 +398,8 @@ def main():
         existing.add(c["id"]); n += 1
         civ_reasons[c["id"]] = f"civic.md, cuvânt cheie „{c['kw']}”"
 
-    json.dump(dict(rows=rows, stats=stats, errors=errors,
+    civic_texts = {c["id"]: c.get("body", "") for c in civ if c["id"] in {r[1] for r in rows}}
+    json.dump(dict(rows=rows, stats=stats, errors=errors, civic_texts=civic_texts,
                    reasons={**{r[1]: next((w for e, (cc, dd, w) in matched if e["ocid"] == r[1]), "civic.md") for r in rows}, **civ_reasons}),
               open(a.out, "w"), ensure_ascii=False, indent=1)
     print(json.dumps(dict(new_rows=len(rows), stats=stats, errors=errors), ensure_ascii=False))
