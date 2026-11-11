@@ -10,16 +10,52 @@ UA = {"User-Agent": "tenders-monitor/1.0"}
 CPV_A = "79950000 79951000 79952000 79952100 79953000 55120000 79340000 79341000 79341400 79342000 79342200 72413000 72212200 80500000 80510000 79400000 79410000 79411000 79800000 79810000".split()
 CPV_B = "79954000 79956000 79530000 79540000 79961000 79416000 79416100 79416200 79413000 79341100 79341200 79342100 79822500 79970000 92111200 22462000 39294100 79632000 79633000 80520000 80521000 80522000 80530000 80532000 80533000 80570000 80420000".split()
 CPV_C = "79900000 79000000 92300000 92000000 55520000 55300000 55110000 60140000 60170000 63510000 80000000 80400000 79310000".split()
-CPV_TRAINING_ONLY = {"80000000", "80400000"}
 DIRECT = set(CPV_A) | set(CPV_B)
 
 
-KW_GENERAL = [r"\bconferin", r"\bconferen", r"\bконференц", r"\bforum", r"\bфорум",
-              r"\bgala\b", r"\bgale\b", r"\bgalei\b", r"\bгала\b",
-              r"\bdelegati", r"\bdelegation", r"\bделегац",
-              r"\bceremon", r"\bцеремон", r"\beveniment", r"\bevent", r"\bмероприят"]
-KW_TRAINING = [r"\binstruir", r"\bformare", r"\bcurs", r"\btraining", r"\bобучен", r"\bтренинг"]
-KW_ALL = KW_GENERAL + KW_TRAINING
+KW_GROUPS = {
+    "evenimente": [r"\bconferin", r"\bconferen", r"\bконференц", r"\bforum", r"\bфорум",
+                   r"\bgala\b", r"\bgale\b", r"\bgalei\b", r"\bгала\b",
+                   r"\bdelegati", r"\bdelegation", r"\bделегац", r"\bceremon", r"\bцеремон",
+                   r"\beveniment", r"\bevent", r"\bмероприят", r"\bsummit", r"\bсаммит",
+                   r"\bcongres", r"\bконгресс", r"\bsimpozi", r"\bsymposi", r"\bсимпозиум",
+                   r"\bseminar", r"\bсеминар", r"\bworkshop", r"\bateliere?\b", r"\batelierul",
+                   r"\bmasa rotunda", r"\bmese rotunde", r"\bround table", r"\bкругл\w* стол",
+                   r"\bteam.?building", r"\bfestival", r"\bфестивал", r"\bexpozit", r"\bexhibition",
+                   r"\bвыставк", r"\btarg(ul|uri|urile|ului)?\b", r"\bярмарк", r"\bconcert", r"\bконцерт", r"\blansare",
+                   r"\blaunch", r"\bvizit\w* de studiu", r"\bstudy (visit|tour)", r"\bознакомительн",
+                   r"\blogistic", r"\bлогистик", r"\bcoffee.?break", r"\bpauz\w* de cafea",
+                   r"\bintalnir", r"\bmeeting", r"\bвстреч"],
+    "ospitalitate": [r"\bcatering", r"\bкейтеринг", r"\bcazare", r"\baccommodation", r"\bпроживан",
+                     r"\bразмещени", r"\bhotel", r"\bотел", r"\bгостиниц", r"\bbilet\w* de avion",
+                     r"\bavia", r"\bflight", r"\bair ?tickets?", r"\bавиабилет", r"\btravel",
+                     r"\bturism", r"\bтуризм", r"\bvenue", r"\bsal\w* de conferint"],
+    "comunicare": [r"\bcomunicare", r"\bcommunication", r"\bкоммуникац", r"\bcampani", r"\bcampaign",
+                   r"\bкампани", r"\bpromov", r"\bpromot", r"\bпродвижен", r"\bpublicitat",
+                   r"\badvertis", r"\bреклам", r"\bvizibilitat", r"\bvisibility", r"\bawareness",
+                   r"\bsensibiliz", r"\bинформирован", r"\bsocial media", r"\bsmm\b",
+                   r"\brelatii publice", r"\bpublic relations", r"\bpr\b", r"\bbranding",
+                   r"\bidentitat\w* vizual", r"\bvisual identity", r"\bmarketing", r"\bмаркетинг"],
+    "tipar": [r"\btipar", r"\btipograf", r"\bprint", r"\bпечат", r"\bполиграф", r"\bpromotional",
+              r"\bpersonalizat", r"\bbanner", r"\broll.?up", r"\bsuvenir", r"\bsouvenir", r"\bсувенир",
+              r"\bmerch", r"\bfoto\b", r"\bfotograf", r"\bphoto\b", r"\bphotograph", r"\bфото\b",
+              r"\bфотограф", r"\bvideo", r"\bвидео", r"\bdesign grafic", r"\bgraphic design",
+              r"\bграфическ\w* дизайн", r"\bpodcast"],
+    "traduceri": [r"\btraduc", r"\btranslat", r"\bперевод", r"\binterpret", r"\bсинхронн"],
+    "instruire": [r"\binstruir", r"\bformare", r"\bcurs", r"\btraining", r"\bобучен", r"\bтренинг",
+                  r"\bfacilitat", r"\bфасилитат", r"\bcapacity building", r"\bconsolidarea capacit",
+                  r"\bmentor", r"\bментор"],
+}
+KW_ALL = [p for ps in KW_GROUPS.values() for p in ps]
+KW_STRONG = [r"\bconferin", r"\bconferen", r"\bконференц", r"\bforum", r"\bфорум", r"\bgala\b", r"\bgale\b",
+    r"\bgalei\b", r"\bгала\b", r"\bceremon", r"\bцеремон", r"\bsummit", r"\bсаммит", r"\bcongres", r"\bконгресс",
+    r"\bsimpozi", r"\bsymposi", r"\bсимпозиум", r"\bfestival", r"\bфестивал", r"\bteam.?building",
+    r"\bmasa rotunda", r"\bmese rotunde", r"\bround table", r"\bкругл\w* стол", r"\bcatering", r"\bкейтеринг",
+    r"\bcazare", r"\baccommodation", r"\bevent (management|planning|organi[sz])", r"\bevent manager",
+    r"\borganizar\w* (a )?(unui |unor )?evenimente", r"\borganizar\w* (a )?evenimentului", r"\bservicii de tipar",
+    r"\btiparire", r"\bprinting services", r"\binterpretariat", r"\binterpretare sincron", r"\bservicii de traducere",
+    r"\btranslation services", r"\bbilet\w* de avion", r"\bstudy (visit|tour)", r"\bvizit\w* de studiu",
+    r"\bexpozit", r"\bexhibition"]
 
 
 def strip_diacritics(s):
@@ -80,7 +116,7 @@ def to_local(iso):
     return dt.astimezone(TZ).strftime("%d.%m.%Y %H:%M")
 
 
-def classify(codes, text):
+def classify(codes, text, title=""):
     seen = []
     for c, d in codes:
         c8 = cpv8(c)
@@ -91,10 +127,13 @@ def classify(codes, text):
             return c, d, "CPV " + ("A" if c8 in CPV_A else "B")
     for c8, c, d in seen:
         if c8 in CPV_C:
-            pats = KW_TRAINING if c8 in CPV_TRAINING_ONLY else KW_ALL
-            hit = kw_hit(text, pats)
+            hit = kw_hit(text, KW_ALL)
             if hit:
                 return c, d, f"CPV C + cuvânt cheie „{hit}”"
+    hit = kw_hit(title, KW_ALL)
+    if hit:
+        c, d = (seen[0][1], seen[0][2]) if seen else ("", "")
+        return c, d, f"cuvânt cheie în titlu „{hit}” (CPV în afara listelor)"
     return None
 
 
@@ -187,7 +226,7 @@ def parse_ro_date(s):
 
 def achizitii(win_start_loc, win_end_loc):
     found, page = [], 1
-    while page <= 60:
+    while page <= 400:
         h = get_text(f"https://achizitii.md/ro/public/tender/list?page={page}")
         items = h.split('class="tender__list__item"')[1:]
         if not items:
@@ -258,7 +297,19 @@ def civic(win_start_loc, win_end_loc):
             im = re.search(r'civiccontent-blog-intro">(.*?)</div>', c, re.S)
             intro = clean(im.group(1)) if im else ""
             om = re.search(r'civiccontent-blog-badge-tag"[^>]*title="([^"]+)"', c)
-            hit = kw_hit(title + " | " + intro, KW_ALL)
+            body = ""
+            if not kw_hit(title + " | " + intro, KW_ALL):
+              try:
+                dh = get_text("https://civic.md" + href)
+                a = dh.find('class="desc-article"')
+                b = dh.find('class="civic-google-content"', a)
+                if a >= 0:
+                    seg = dh[a:b if b > a else a + 60000]
+                    seg = re.sub(r"<script.*?</script>", " ", seg, flags=re.S)
+                    body = clean(seg)
+              except Exception:
+                body = ""
+            hit = kw_hit(title + " | " + intro, KW_ALL) or kw_hit(body, KW_STRONG)
             if hit:
                 num = re.search(r"/(\d+)-", href)
                 found.append(dict(id="civic-" + (num.group(1) if num else href), title=title, pub=d,
@@ -312,7 +363,7 @@ def main():
             continue
         if e["status"] in ("cancelled", "unsuccessful"):
             continue
-        c = classify(e["codes"], e["text"])
+        c = classify(e["codes"], e["text"], e["title"])
         if not c:
             continue
         matched.append((e, c))
