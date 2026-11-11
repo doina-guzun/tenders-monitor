@@ -124,16 +124,16 @@ def classify(codes, text, title=""):
             seen.append((c8, c, d))
     for c8, c, d in seen:
         if c8 in DIRECT:
-            return c, d, "CPV " + ("A" if c8 in CPV_A else "B")
+            return c, d, "CPV listă " + ("A" if c8 in CPV_A else "B")
     for c8, c, d in seen:
         if c8 in CPV_C:
             hit = kw_hit(text, KW_ALL)
             if hit:
-                return c, d, f"CPV C + cuvânt cheie „{hit}”"
+                return c, d, f"CPV listă C + „{hit}”"
     hit = kw_hit(title, KW_ALL)
     if hit:
         c, d = (seen[0][1], seen[0][2]) if seen else ("", "")
-        return c, d, f"cuvânt cheie în titlu „{hit}” (CPV în afara listelor)"
+        return c, d, f"titlu „{hit}” · CPV în afara listelor"
     return None
 
 
@@ -374,33 +374,35 @@ def main():
     except Exception as ex:
         civ, errors["civic"] = [], str(ex)
 
-    civ_reasons = {}
     year = now.year
     n = a.next_id
     today = now.strftime("%d.%m.%Y")
+
+    def hl(url, title):
+        return '=HYPERLINK("%s";"%s")' % (url.replace('"', '""'), " ".join(title.split()).replace('"', '""'))
+
+    civ_ids = set()
     for e, (code, desc, why) in sorted(matched, key=lambda x: x[0]["pub"] or ""):
         if e["ocid"] in existing:
             continue
         amount = e["amount"]
         if amount is not None and e["currency"] and e["currency"] != "MDL":
             amount = f"{amount} {e['currency']}"
-        rows.append([f"TND-{year}-{n:04d}", e["ocid"], today, to_local(e["pub"])[:10],
+        link = f"https://mtender.gov.md/tenders/{e['ocid']}"
+        rows.append(["Pending", to_local(e["deadline"]), None, hl(link, e["title"]), link, e["buyer"], why,
+                     amount if amount is not None else "", "", f"TND-{year}-{n:04d}",
                      "MTender (via achizitii.md)" if e["ocid"] in via_ach else "MTender",
-                     e["title"], e["buyer"], code, desc or "", amount if amount is not None else "",
-                     to_local(e["deadline"]), f"https://mtender.gov.md/tenders/{e['ocid']}",
-                     "Pending", ""])
+                     today, to_local(e["pub"])[:10], code, desc or "", e["ocid"]])
         existing.add(e["ocid"]); n += 1
     for c in sorted(civ, key=lambda x: x["pub"]):
         if c["id"] in existing:
             continue
-        rows.append([f"TND-{year}-{n:04d}", c["id"], today, c["pub"].strftime("%d.%m.%Y"), "civic.md",
-                     c["title"], c["org"], "", "", "", "", c["link"], "Pending", ""])
-        existing.add(c["id"]); n += 1
-        civ_reasons[c["id"]] = f"civic.md, cuvânt cheie „{c['kw']}”"
+        rows.append(["Pending", "", None, hl(c["link"], c["title"]), c["link"], c["org"], f"civic.md · „{c['kw']}”",
+                     "", "", f"TND-{year}-{n:04d}", "civic.md", today, c["pub"].strftime("%d.%m.%Y"), "", "", c["id"]])
+        existing.add(c["id"]); civ_ids.add(c["id"]); n += 1
 
-    civic_texts = {c["id"]: c.get("body", "") for c in civ if c["id"] in {r[1] for r in rows}}
-    json.dump(dict(rows=rows, stats=stats, errors=errors, civic_texts=civic_texts,
-                   reasons={**{r[1]: next((w for e, (cc, dd, w) in matched if e["ocid"] == r[1]), "civic.md") for r in rows}, **civ_reasons}),
+    civic_texts = {c["id"]: c.get("body", "") for c in civ if c["id"] in civ_ids}
+    json.dump(dict(rows=rows, stats=stats, errors=errors, civic_texts=civic_texts),
               open(a.out, "w"), ensure_ascii=False, indent=1)
     print(json.dumps(dict(new_rows=len(rows), stats=stats, errors=errors), ensure_ascii=False))
 
