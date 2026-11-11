@@ -1,15 +1,3 @@
-#!/usr/bin/env python3
-"""Job zilnic de monitorizare a tenderelor (MTender + achizitii.md + civic.md).
-
-Utilizare:
-  python3 tender_job.py --from 2026-11-10 --to 2026-11-10 \
-      --existing existing_ids.json --next-id 1 --out result.json
-
-  --from/--to   : zile calendaristice (inclusiv), ora Europe/Chisinau
-  --existing    : JSON cu lista OCID / ID-uri deja prezente în fila „Tendere” (col. B)
-  --next-id     : următorul număr NNNN pentru TND-AAAA-NNNN în anul curent
-Rezultat: JSON cu "rows" (A–N, gata de adăugat), "stats" și "errors" pe surse.
-"""
 import argparse, json, re, sys, time, unicodedata, html as htmlmod
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -25,7 +13,7 @@ CPV_C = "79900000 79000000 92300000 92000000 55520000 55300000 55110000 60140000
 CPV_TRAINING_ONLY = {"80000000", "80400000"}
 DIRECT = set(CPV_A) | set(CPV_B)
 
-# cuvinte cheie: început de cuvânt; textul se normalizează fără diacritice
+
 KW_GENERAL = [r"\bconferin", r"\bconferen", r"\bконференц", r"\bforum", r"\bфорум",
               r"\bgala\b", r"\bgale\b", r"\bgalei\b", r"\bгала\b",
               r"\bdelegati", r"\bdelegation", r"\bделегац",
@@ -36,7 +24,7 @@ KW_ALL = KW_GENERAL + KW_TRAINING
 
 def strip_diacritics(s):
     s = (s or "").lower()
-    # păstrăm literele chirilice (й etc.) – eliminăm doar semnele diacritice latine
+
     out = []
     for ch in unicodedata.normalize("NFD", s):
         if unicodedata.category(ch) == "Mn":
@@ -92,9 +80,7 @@ def to_local(iso):
     return dt.astimezone(TZ).strftime("%d.%m.%Y %H:%M")
 
 
-# ---------------------------------------------------------------- clasificare
 def classify(codes, text):
-    """codes: listă (cod, denumire). Întoarce (cod, denumire, motiv) sau None."""
     seen = []
     for c, d in codes:
         c8 = cpv8(c)
@@ -147,10 +133,7 @@ def ocds_extract(rec):
                 deadline=(t.get("tenderPeriod") or {}).get("endDate"))
 
 
-# ---------------------------------------------------------------- MTender
 def mtender(win_start_utc, win_end_utc, now_utc):
-    """Listează tot ce s-a modificat de la începutul perioadei până acum (un tender publicat
-    ieri dar modificat azi apare doar cu data de azi), apoi filtrează după data publicării."""
     off = win_start_utc.strftime("%Y-%m-%dT%H:%M:%SZ")
     ocids = {}
     pages = 0
@@ -188,7 +171,6 @@ def mtender(win_start_utc, win_end_utc, now_utc):
     return out, dict(listed=len(ocids), fetch_errors=len(errors), published_in_window=len(out))
 
 
-# ---------------------------------------------------------------- achizitii.md
 RO_MONTHS = {"ian": 1, "feb": 2, "mar": 3, "apr": 4, "mai": 5, "iun": 6, "iul": 7, "aug": 8,
              "sep": 9, "sept": 9, "oct": 10, "noi": 11, "nov": 11, "dec": 12}
 
@@ -240,9 +222,7 @@ def achizitii(win_start_loc, win_end_loc):
                      without_ocid=sum(1 for v in res.values() if not v))
 
 
-# ---------------------------------------------------------------- civic.md
 def civic(win_start_loc, win_end_loc):
-    """civic.md: 20 anunțuri pe pagină, fără CPV – filtrare după cuvinte cheie."""
     def clean(s):
         return re.sub(r"\s+", " ", htmlmod.unescape(re.sub(r"<[^>]+>", " ", s or ""))).strip()
 
@@ -280,13 +260,12 @@ def civic(win_start_loc, win_end_loc):
     return found, in_window
 
 
-# ---------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--from", dest="dfrom", required=True)
     ap.add_argument("--to", dest="dto", required=True)
-    ap.add_argument("--existing", default=None, help="JSON cu ID-urile deja în tabel (opțional)")
-    ap.add_argument("--next-id", type=int, default=1, help="următorul NNNN (implicit 1)")
+    ap.add_argument("--existing", default=None)
+    ap.add_argument("--next-id", type=int, default=1)
     ap.add_argument("--out", default="result.json")
     a = ap.parse_args()
 
