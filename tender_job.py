@@ -228,10 +228,20 @@ def civic(win_start_loc, win_end_loc):
 
     found, start, in_window = [], 0, 0
     while start <= 600:
-        h = get_text(f"https://civic.md/anunturi/achizitii.html?start={start}")
-        cards = h.split('<article class="civiccontent-blog-card"')[1:]
+        url = f"https://civic.md/anunturi/achizitii.html?limitstart={start}"
+        cards = []
+        for attempt in range(3):
+            req = urllib.request.Request(url, headers=UA)
+            resp = urllib.request.urlopen(req, timeout=60)
+            if f"limitstart={start}" not in resp.geturl():
+                raise RuntimeError(f"civic.md a redirecționat pagina {start} la {resp.geturl()}")
+            h = resp.read().decode("utf-8", "replace")
+            cards = h.split('<article class="civiccontent-blog-card"')[1:]
+            if cards:
+                break
+            time.sleep(5)
         if not cards:
-            break
+            raise RuntimeError(f"civic.md: pagina {start} nu are anunțuri")
         oldest = None
         for c in cards:
             tm = re.search(r'civiccontent-blog-title">\s*<a href="([^"]+)"[^>]*>(.*?)</a>', c, re.S)
